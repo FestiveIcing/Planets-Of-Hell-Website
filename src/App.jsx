@@ -12,6 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/crimson-domain" element={<CrimsonDomain />} />
+        <Route path="/ghostly-manors" element={<GhostlyManors />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Router>
