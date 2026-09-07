@@ -92,12 +92,12 @@ export default function Home() {
           </p>
           <div className="pt-1">
             <a
-              href="https://starsolenterprise.com"
+              href="https://collapseinitiative.com"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-md border border-white/30 px-4 py-2 text-white transition-colors hover:bg-white hover:text-black"
             >
-              <span>Starlight Solutions, Inc.</span>
+              <span>Collapse Initiative, Inc.</span>
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
           </div>
