@@ -79,7 +79,7 @@ export default function Home() {
           <p className="text-white/70">
             &quot;Planets of Hell&quot; by{' '}
             <a
-              href="https://www.roblox.com/communities/254329821/Collapse-Initiative-Inc#!/about"
+              href="https://collapseinitiative.com"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white"
@@ -92,12 +92,12 @@ export default function Home() {
           </p>
           <div className="pt-1">
             <a
-              href="https://collapseinitiative.com"
+              href="https://goldencrownent.com"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-md border border-white/30 px-4 py-2 text-white transition-colors hover:bg-white hover:text-black"
             >
-              <span>Collapse Initiative, Inc.</span>
+              <span>Golden Crown Entertainment Group, Inc.</span>
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
           </div>
