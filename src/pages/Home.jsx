@@ -77,19 +77,25 @@ export default function Home() {
 
         <footer className="mt-auto space-y-4 text-sm">
           <p className="text-white/70">
-            &quot;Planets of Hell&quot; by{' '}
-            <a
-              href="https://collapseinitiative.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white"
-            >
-              Collapse Initiative, Inc.
-            </a>
-          </p>
-          <p className="text-white/50">
-            A brand of Golden Crown Entertainment Group, Inc.
-          </p>
+  &quot;Planets of Hell&quot; by{' '}
+  <a
+    href="https://collapseinitiative.com"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white"
+  >
+    Collapse Initiative, Inc.
+  </a>
+</p>
+
+<p className="text-white/50">
+  Brought to you by Ethan Marsh &amp; Vincent Hawkthorne, the braincells behind this project!
+</p>
+
+<p className="text-white/50">
+  A brand of Golden Crown Entertainment Group, Inc.
+</p>
+         
           <div className="pt-1">
             <a
               href="https://goldencrownent.com"
