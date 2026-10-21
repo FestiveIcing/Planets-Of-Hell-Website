@@ -89,13 +89,13 @@ export default function Home() {
 </p>
 
 <p className="text-white/50">
-  Brought to you by Ethan Marsh &amp; Vincent Hawkthorne, the braincells behind this project!
+  Brought to you by festiveicing (SirJolly) &amp; BeyondBeyondDeathX_x (RippedApart), the braincells behind this project!
 </p>
 
 <p className="text-white/50">
   A brand of Golden Crown Entertainment Group, Inc.
 </p>
-         
+
           <div className="pt-1">
             <a
               href="https://goldencrownent.com"
