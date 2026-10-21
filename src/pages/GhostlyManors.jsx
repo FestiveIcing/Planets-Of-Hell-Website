@@ -1,5 +1,72 @@
 import { useEffect, useRef } from "react";
 
+const SETTINGS = {
+  backgroundParticles: 115,
+  formations: 6,
+  maxDevicePixelRatio: 2,
+};
+
+function random(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function lerp(start, end, progress) {
+  return start + (end - start) * progress;
+}
+
+function createManorPoints(scale) {
+  return [
+    { x: -scale * 0.48, y: scale * 0.42 },
+    { x: -scale * 0.48, y: -scale * 0.05 },
+    { x: -scale * 0.27, y: -scale * 0.05 },
+    { x: -scale * 0.18, y: -scale * 0.27 },
+    { x: 0, y: -scale * 0.55 },
+    { x: scale * 0.18, y: -scale * 0.27 },
+    { x: scale * 0.27, y: -scale * 0.05 },
+    { x: scale * 0.48, y: -scale * 0.05 },
+    { x: scale * 0.48, y: scale * 0.42 },
+    { x: scale * 0.16, y: scale * 0.42 },
+    { x: scale * 0.16, y: scale * 0.08 },
+    { x: -scale * 0.16, y: scale * 0.08 },
+    { x: -scale * 0.16, y: scale * 0.42 },
+    { x: -scale * 0.48, y: scale * 0.42 },
+  ];
+}
+
+function createBrokenArchitecture(scale) {
+  const points = createManorPoints(scale);
+  const segments = [];
+
+  for (let index = 0; index < points.length - 1; index++) {
+    segments.push([points[index], points[index + 1]]);
+  }
+
+  segments.push(
+    [
+      { x: -scale * 0.32, y: -scale * 0.05 },
+      { x: -scale * 0.32, y: scale * 0.42 },
+    ],
+    [
+      { x: scale * 0.32, y: -scale * 0.05 },
+      { x: scale * 0.32, y: scale * 0.42 },
+    ],
+    [
+      { x: -scale * 0.16, y: scale * 0.08 },
+      { x: scale * 0.16, y: scale * 0.08 },
+    ],
+    [
+      { x: -scale * 0.62, y: scale * 0.18 },
+      { x: -scale * 0.56, y: -scale * 0.12 },
+    ],
+    [
+      { x: scale * 0.56, y: -scale * 0.12 },
+      { x: scale * 0.62, y: scale * 0.18 },
+    ]
+  );
+
+  return segments;
+}
+
 export default function GhostlyManors() {
   const canvasRef = useRef(null);
 
@@ -7,52 +74,29 @@ export default function GhostlyManors() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const context = canvas.getContext("2d");
+    if (!context) return;
 
     let width = 0;
     let height = 0;
-    let dpr = 1;
+    let pixelRatio = 1;
     let animationFrame;
 
     const backgroundParticles = [];
     const formations = [];
 
-    const SETTINGS = {
-      backgroundParticles: 115,
-      formations: 6,
-    };
-
-    function random(min, max) {
-      return Math.random() * (max - min) + min;
-    }
-
-    function lerp(a, b, t) {
-      return a + (b - a) * t;
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * BACKGROUND PARTICLES
-     * ------------------------------------------------------------
-     */
-
     function createBackgroundParticles() {
       backgroundParticles.length = 0;
 
-      for (let i = 0; i < SETTINGS.backgroundParticles; i++) {
+      for (let index = 0; index < SETTINGS.backgroundParticles; index++) {
         backgroundParticles.push({
           x: Math.random() * width,
           y: Math.random() * height,
-
           vx: random(-0.08, 0.08),
           vy: random(-0.08, 0.08),
-
           size: random(0.35, 1.35),
-
           alpha: random(0.08, 0.38),
-
           phase: random(0, Math.PI * 2),
-
           speed: random(0.003, 0.011),
         });
       }
@@ -62,262 +106,66 @@ export default function GhostlyManors() {
       for (const particle of backgroundParticles) {
         particle.x += particle.vx;
         particle.y += particle.vy;
-
         particle.phase += particle.speed;
 
-        if (particle.x < -20) {
-          particle.x = width + 20;
-        }
-
-        if (particle.x > width + 20) {
-          particle.x = -20;
-        }
-
-        if (particle.y < -20) {
-          particle.y = height + 20;
-        }
-
-        if (particle.y > height + 20) {
-          particle.y = -20;
-        }
+        if (particle.x < -20) particle.x = width + 20;
+        if (particle.x > width + 20) particle.x = -20;
+        if (particle.y < -20) particle.y = height + 20;
+        if (particle.y > height + 20) particle.y = -20;
       }
     }
 
     function drawBackgroundParticles() {
       for (const particle of backgroundParticles) {
-        const pulse =
-          0.45 +
-          Math.sin(particle.phase) * 0.55;
+        const pulse = 0.45 + Math.sin(particle.phase) * 0.55;
 
-        ctx.beginPath();
-
-        ctx.arc(
-          particle.x,
-          particle.y,
-          particle.size,
-          0,
-          Math.PI * 2
-        );
-
-        ctx.fillStyle = `rgba(235, 238, 242, ${
-          particle.alpha * pulse
-        })`;
-
-        ctx.fill();
+        context.beginPath();
+        context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        context.fillStyle = `rgba(235, 238, 242, ${particle.alpha * pulse})`;
+        context.fill();
       }
     }
-
-    /*
-     * ------------------------------------------------------------
-     * GHOSTLY MANOR GEOMETRY
-     * ------------------------------------------------------------
-     *
-     * These aren't perfect geometric symbols.
-     * Each formation is assembled from architectural points:
-     *
-     *      roof
-     *       /\
-     *      /  \
-     *  ___/____\___
-     *  |  |    |  |
-     *  |  |    |  |
-     *  |__|____|__|
-     *
-     * The points are intentionally distorted to make
-     * each apparition feel slightly different.
-     */
-
-    function createManorPoints(scale) {
-      return [
-        { x: -scale * 0.48, y: scale * 0.42 },
-        { x: -scale * 0.48, y: -scale * 0.05 },
-
-        { x: -scale * 0.27, y: -scale * 0.05 },
-        { x: -scale * 0.18, y: -scale * 0.27 },
-
-        { x: 0, y: -scale * 0.55 },
-
-        { x: scale * 0.18, y: -scale * 0.27 },
-        { x: scale * 0.27, y: -scale * 0.05 },
-
-        { x: scale * 0.48, y: -scale * 0.05 },
-        { x: scale * 0.48, y: scale * 0.42 },
-
-        { x: scale * 0.16, y: scale * 0.42 },
-        { x: scale * 0.16, y: scale * 0.08 },
-
-        { x: -scale * 0.16, y: scale * 0.08 },
-        { x: -scale * 0.16, y: scale * 0.42 },
-
-        { x: -scale * 0.48, y: scale * 0.42 },
-      ];
-    }
-
-    function createBrokenArchitecture(scale) {
-      const p = createManorPoints(scale);
-
-      const segments = [];
-
-      for (let i = 0; i < p.length - 1; i++) {
-        segments.push([p[i], p[i + 1]]);
-      }
-
-      /*
-       * Interior architectural details.
-       */
-
-      segments.push([
-        { x: -scale * 0.32, y: -scale * 0.05 },
-        { x: -scale * 0.32, y: scale * 0.42 },
-      ]);
-
-      segments.push([
-        { x: scale * 0.32, y: -scale * 0.05 },
-        { x: scale * 0.32, y: scale * 0.42 },
-      ]);
-
-      segments.push([
-        { x: -scale * 0.16, y: scale * 0.08 },
-        { x: scale * 0.16, y: scale * 0.08 },
-      ]);
-
-      /*
-       * Ghostly surrounding fragments.
-       */
-
-      segments.push([
-        { x: -scale * 0.62, y: scale * 0.18 },
-        { x: -scale * 0.56, y: -scale * 0.12 },
-      ]);
-
-      segments.push([
-        { x: scale * 0.56, y: -scale * 0.12 },
-        { x: scale * 0.62, y: scale * 0.18 },
-      ]);
-
-      return segments;
-    }
-
-    /*
-     * ------------------------------------------------------------
-     * FORMATIONS
-     * ------------------------------------------------------------
-     */
 
     function createFormations() {
       formations.length = 0;
 
-      for (let i = 0; i < SETTINGS.formations; i++) {
+      for (let index = 0; index < SETTINGS.formations; index++) {
         formations.push({
           x: width * random(0.08, 0.92),
           y: height * random(0.18, 0.88),
-
           radius: random(70, 135),
-
           rotation: random(-0.15, 0.15),
-
-          rotationSpeed: random(
-            -0.00018,
-            0.00018
-          ),
-
+          rotationSpeed: random(-0.00018, 0.00018),
           driftX: random(-0.035, 0.035),
           driftY: random(-0.025, 0.025),
-
           progress: random(0, 7),
-
-          speed: random(
-            0.0025,
-            0.0055
-          ),
-
-          mode:
-            Math.random() > 0.42
-              ? "particles"
-              : "lines",
-
-          opacity: random(
-            0.16,
-            0.38
-          ),
-
-          phase: random(
-            0,
-            Math.PI * 2
-          ),
+          speed: random(0.0025, 0.0055),
+          mode: Math.random() > 0.42 ? "particles" : "lines",
+          opacity: random(0.16, 0.38),
+          phase: random(0, Math.PI * 2),
         });
       }
     }
 
-    /*
-     * ------------------------------------------------------------
-     * GHOST GLOW
-     * ------------------------------------------------------------
-     */
+    function drawGlow(x, y, radius, intensity) {
+      const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
 
-    function drawGlow(
-      x,
-      y,
-      radius,
-      intensity
-    ) {
-      const gradient =
-        ctx.createRadialGradient(
-          x,
-          y,
-          0,
-          x,
-          y,
-          radius
-        );
-
-      gradient.addColorStop(
-        0,
-        `rgba(255, 255, 255, ${intensity})`
-      );
-
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${intensity})`);
       gradient.addColorStop(
         0.25,
-        `rgba(220, 225, 230, ${
-          intensity * 0.28
-        })`
+        `rgba(220, 225, 230, ${intensity * 0.28})`
       );
+      gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-      gradient.addColorStop(
-        1,
-        "rgba(0, 0, 0, 0)"
-      );
-
-      ctx.fillStyle = gradient;
-
-      ctx.beginPath();
-
-      ctx.arc(
-        x,
-        y,
-        radius,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(x, y, radius, 0, Math.PI * 2);
+      context.fill();
     }
 
-    /*
-     * ------------------------------------------------------------
-     * LINE FORMATION
-     * ------------------------------------------------------------
-     */
-
-    function drawLineFormation(f) {
-      const segments =
-        createBrokenArchitecture(
-          f.radius
-        );
-
-      const cycle =
-        f.progress % 8;
-
+    function drawLineFormation(formation) {
+      const segments = createBrokenArchitecture(formation.radius);
+      const cycle = formation.progress % 8;
       let visibility = 0;
 
       if (cycle < 2) {
@@ -325,544 +173,225 @@ export default function GhostlyManors() {
       } else if (cycle < 5) {
         visibility = 1;
       } else if (cycle < 8) {
-        visibility =
-          1 - (cycle - 5) / 3;
+        visibility = 1 - (cycle - 5) / 3;
       }
 
-      visibility *= f.opacity;
-
+      visibility *= formation.opacity;
       if (visibility <= 0) return;
 
-      ctx.save();
+      context.save();
+      context.translate(formation.x, formation.y);
+      context.rotate(formation.rotation);
+      context.shadowBlur = 15;
+      context.shadowColor = "rgba(255, 255, 255, 0.55)";
 
-      ctx.translate(f.x, f.y);
-
-      ctx.rotate(f.rotation);
-
-      /*
-       * Slight spectral blur.
-       */
-
-      ctx.shadowBlur = 15;
-
-      ctx.shadowColor =
-        "rgba(255,255,255,0.55)";
-
-      for (
-        let i = 0;
-        i < segments.length;
-        i++
-      ) {
-        const [a, b] = segments[i];
-
-        const segmentProgress =
-          Math.max(
-            0,
-            Math.min(
-              1,
-              cycle * 0.75 -
-                i * 0.075
-            )
-          );
-
-        if (
-          segmentProgress <= 0
-        ) {
-          continue;
-        }
-
-        const endX = lerp(
-          a.x,
-          b.x,
-          segmentProgress
+      for (let index = 0; index < segments.length; index++) {
+        const [start, end] = segments[index];
+        const segmentProgress = Math.max(
+          0,
+          Math.min(1, cycle * 0.75 - index * 0.075)
         );
 
-        const endY = lerp(
-          a.y,
-          b.y,
-          segmentProgress
-        );
+        if (segmentProgress <= 0) continue;
 
-        ctx.beginPath();
+        const endX = lerp(start.x, end.x, segmentProgress);
+        const endY = lerp(start.y, end.y, segmentProgress);
 
-        ctx.moveTo(
-          a.x,
-          a.y
-        );
-
-        ctx.lineTo(
-          endX,
-          endY
-        );
-
-        ctx.strokeStyle =
-          `rgba(245, 247, 250, ${
-            visibility * 0.72
-          })`;
-
-        ctx.lineWidth = 0.9;
-
-        ctx.stroke();
+        context.beginPath();
+        context.moveTo(start.x, start.y);
+        context.lineTo(endX, endY);
+        context.strokeStyle = `rgba(245, 247, 250, ${visibility * 0.72})`;
+        context.lineWidth = 0.9;
+        context.stroke();
       }
 
-      ctx.restore();
+      context.restore();
     }
 
-    /*
-     * ------------------------------------------------------------
-     * PARTICLE FORMATION
-     * ------------------------------------------------------------
-     */
-
-    function drawParticleFormation(f) {
-      const segments =
-        createBrokenArchitecture(
-          f.radius
-        );
-
+    function drawParticleFormation(formation) {
+      const segments = createBrokenArchitecture(formation.radius);
       const points = [];
 
-      for (const segment of segments) {
-        const [a, b] = segment;
-
+      for (const [start, end] of segments) {
         const count = 12;
 
-        for (
-          let i = 0;
-          i < count;
-          i++
-        ) {
-          const t =
-            i /
-            (count - 1);
+        for (let index = 0; index < count; index++) {
+          const progress = index / (count - 1);
 
           points.push({
-            x: lerp(
-              a.x,
-              b.x,
-              t
-            ),
-
-            y: lerp(
-              a.y,
-              b.y,
-              t
-            ),
+            x: lerp(start.x, end.x, progress),
+            y: lerp(start.y, end.y, progress),
           });
         }
       }
 
-      const cycle =
-        f.progress % 8;
-
+      const cycle = formation.progress % 8;
       let formationProgress;
 
       if (cycle < 2.4) {
-        formationProgress =
-          cycle / 2.4;
+        formationProgress = cycle / 2.4;
       } else if (cycle < 5.5) {
         formationProgress = 1;
       } else {
-        formationProgress =
-          1 -
-          (cycle - 5.5) /
-            2.5;
+        formationProgress = 1 - (cycle - 5.5) / 2.5;
       }
 
-      formationProgress =
-        Math.max(
+      formationProgress = Math.max(0, Math.min(1, formationProgress));
+
+      context.save();
+      context.translate(formation.x, formation.y);
+      context.rotate(formation.rotation);
+
+      for (let index = 0; index < points.length; index++) {
+        const target = points[index];
+        const angle = index * 2.399 + formation.progress * 0.12;
+        const distance = 100 + Math.sin(index * 3.7) * 45;
+        const startX = target.x + Math.cos(angle) * distance;
+        const startY = target.y + Math.sin(angle) * distance;
+
+        const stagger = Math.max(
           0,
           Math.min(
             1,
-            formationProgress
+            formationProgress * 1.3 - (index / points.length) * 0.38
           )
         );
 
-      ctx.save();
-
-      ctx.translate(
-        f.x,
-        f.y
-      );
-
-      ctx.rotate(
-        f.rotation
-      );
-
-      for (
-        let i = 0;
-        i < points.length;
-        i++
-      ) {
-        const target =
-          points[i];
-
-        const angle =
-          i * 2.399 +
-          f.progress * 0.12;
-
-        const distance =
-          100 +
-          Math.sin(
-            i * 3.7
-          ) *
-            45;
-
-        const startX =
-          target.x +
-          Math.cos(angle) *
-            distance;
-
-        const startY =
-          target.y +
-          Math.sin(angle) *
-            distance;
-
-        const stagger =
-          Math.max(
-            0,
-            Math.min(
-              1,
-              formationProgress *
-                1.3 -
-                (i /
-                  points.length) *
-                  0.38
-            )
-          );
-
-        const x = lerp(
-          startX,
-          target.x,
-          stagger
-        );
-
-        const y = lerp(
-          startY,
-          target.y,
-          stagger
-        );
-
+        const x = lerp(startX, target.x, stagger);
+        const y = lerp(startY, target.y, stagger);
         const shimmer =
-          0.45 +
-          Math.sin(
-            i * 1.7 +
-              f.progress *
-                3
-          ) *
-            0.3;
+          0.45 + Math.sin(index * 1.7 + formation.progress * 3) * 0.3;
+        const alpha = stagger * shimmer * formation.opacity;
 
-        const alpha =
-          stagger *
-          shimmer *
-          f.opacity;
-
-        ctx.beginPath();
-
-        ctx.arc(
-          x,
-          y,
-          random(
-            0.65,
-            1.15
-          ),
-          0,
-          Math.PI * 2
-        );
-
-        ctx.fillStyle =
-          `rgba(245, 247, 250, ${alpha})`;
-
-        ctx.shadowBlur = 9;
-
-        ctx.shadowColor =
-          "rgba(255,255,255,0.65)";
-
-        ctx.fill();
+        context.beginPath();
+        context.arc(x, y, random(0.65, 1.15), 0, Math.PI * 2);
+        context.fillStyle = `rgba(245, 247, 250, ${alpha})`;
+        context.shadowBlur = 9;
+        context.shadowColor = "rgba(255, 255, 255, 0.65)";
+        context.fill();
       }
 
-      ctx.restore();
+      context.restore();
     }
 
-    /*
-     * ------------------------------------------------------------
-     * FLOATING SPECTRAL DUST
-     * ------------------------------------------------------------
-     */
-
-    function drawSpectralDust(f) {
+    function drawSpectralDust(formation) {
       const count = 14;
 
-      ctx.save();
+      context.save();
+      context.translate(formation.x, formation.y);
 
-      ctx.translate(
-        f.x,
-        f.y
-      );
-
-      for (
-        let i = 0;
-        i < count;
-        i++
-      ) {
-        const angle =
-          i * 2.71 +
-          f.phase;
-
+      for (let index = 0; index < count; index++) {
+        const angle = index * 2.71 + formation.phase;
         const distance =
-          f.radius *
-          (1.25 +
-            Math.sin(
-              i * 4.2 +
-                f.progress
-            ) *
-              0.35);
+          formation.radius *
+          (1.25 + Math.sin(index * 4.2 + formation.progress) * 0.35);
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
+        const pulse = 0.25 + Math.sin(formation.progress * 2 + index) * 0.2;
 
-        const x =
-          Math.cos(angle) *
-          distance;
-
-        const y =
-          Math.sin(angle) *
-          distance;
-
-        const pulse =
-          0.25 +
-          Math.sin(
-            f.progress * 2 +
-              i
-          ) *
-            0.2;
-
-        ctx.beginPath();
-
-        ctx.arc(
-          x,
-          y,
-          0.65,
-          0,
-          Math.PI * 2
-        );
-
-        ctx.fillStyle =
-          `rgba(240,243,246,${Math.max(
-            0,
-            pulse
-          )})`;
-
-        ctx.fill();
+        context.beginPath();
+        context.arc(x, y, 0.65, 0, Math.PI * 2);
+        context.fillStyle = `rgba(240, 243, 246, ${Math.max(0, pulse)})`;
+        context.fill();
       }
 
-      ctx.restore();
+      context.restore();
     }
-
-    /*
-     * ------------------------------------------------------------
-     * UPDATE FORMATIONS
-     * ------------------------------------------------------------
-     */
 
     function updateFormations() {
-      for (const f of formations) {
-        f.progress += f.speed;
+      for (const formation of formations) {
+        formation.progress += formation.speed;
+        formation.rotation += formation.rotationSpeed;
+        formation.phase += 0.003;
+        formation.x += formation.driftX;
+        formation.y += formation.driftY;
 
-        f.rotation +=
-          f.rotationSpeed;
-
-        f.phase += 0.003;
-
-        f.x += f.driftX;
-        f.y += f.driftY;
-
-        if (f.x < -180) {
-          f.x =
-            width + 180;
-        }
-
-        if (
-          f.x >
-          width + 180
-        ) {
-          f.x = -180;
-        }
-
-        if (f.y < -180) {
-          f.y =
-            height + 180;
-        }
-
-        if (
-          f.y >
-          height + 180
-        ) {
-          f.y = -180;
-        }
+        if (formation.x < -180) formation.x = width + 180;
+        if (formation.x > width + 180) formation.x = -180;
+        if (formation.y < -180) formation.y = height + 180;
+        if (formation.y > height + 180) formation.y = -180;
       }
     }
 
-    /*
-     * ------------------------------------------------------------
-     * RESIZE
-     * ------------------------------------------------------------
-     */
-
     function resize() {
-      dpr = Math.min(
-        window.devicePixelRatio ||
-          1,
-        2
+      pixelRatio = Math.min(
+        window.devicePixelRatio || 1,
+        SETTINGS.maxDevicePixelRatio
       );
 
-      width =
-        window.innerWidth;
+      width = window.innerWidth;
+      height = window.innerHeight;
 
-      height =
-        window.innerHeight;
+      canvas.width = width * pixelRatio;
+      canvas.height = height * pixelRatio;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
 
-      canvas.width =
-        width * dpr;
-
-      canvas.height =
-        height * dpr;
-
-      canvas.style.width =
-        `${width}px`;
-
-      canvas.style.height =
-        `${height}px`;
-
-      ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
-      );
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
       createBackgroundParticles();
-
       createFormations();
     }
 
-    /*
-     * ------------------------------------------------------------
-     * ANIMATION
-     * ------------------------------------------------------------
-     */
-
     function animate() {
-      /*
-       * Long persistence creates subtle ghost trails.
-       */
-
-      ctx.fillStyle =
-        "rgba(0, 0, 0, 0.18)";
-
-      ctx.fillRect(
-        0,
-        0,
-        width,
-        height
-      );
+      context.fillStyle = "rgba(0, 0, 0, 0.18)";
+      context.fillRect(0, 0, width, height);
 
       updateBackgroundParticles();
-
       updateFormations();
-
       drawBackgroundParticles();
 
-      for (const f of formations) {
-        const pulse =
-          0.8 +
-          Math.sin(
-            f.progress * 2
-          ) *
-            0.2;
+      for (const formation of formations) {
+        const pulse = 0.8 + Math.sin(formation.progress * 2) * 0.2;
 
         drawGlow(
-          f.x,
-          f.y,
-          f.radius * 2.4,
+          formation.x,
+          formation.y,
+          formation.radius * 2.4,
           0.018 * pulse
         );
 
-        drawSpectralDust(f);
+        drawSpectralDust(formation);
 
-        if (
-          f.mode ===
-          "lines"
-        ) {
-          drawLineFormation(f);
+        if (formation.mode === "lines") {
+          drawLineFormation(formation);
         } else {
-          drawParticleFormation(f);
+          drawParticleFormation(formation);
         }
       }
 
-      animationFrame =
-        requestAnimationFrame(
-          animate
-        );
+      animationFrame = requestAnimationFrame(animate);
     }
 
-    window.addEventListener(
-      "resize",
-      resize
-    );
-
+    window.addEventListener("resize", resize);
     resize();
 
-    /*
-     * Start with a completely black canvas,
-     * rather than inheriting random pixels.
-     */
-
-    ctx.fillStyle =
-      "#000000";
-
-    ctx.fillRect(
-      0,
-      0,
-      width,
-      height
-    );
-
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, width, height);
     animate();
 
     return () => {
-      window.removeEventListener(
-        "resize",
-        resize
-      );
-
-      cancelAnimationFrame(
-        animationFrame
-      );
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(animationFrame);
     };
   }, []);
 
   return (
     <div className="ghostly-manors">
       <div className="title-container">
-        <h1 className="title">
-          Ghostly Manors
-        </h1>
-
+        <h1 className="title">Ghostly Manors</h1>
         <div className="title-line" />
       </div>
 
-      <canvas
-        ref={canvasRef}
-        id="ghostly-canvas"
-      />
+      <canvas ref={canvasRef} id="ghostly-canvas" />
 
       <style>{`
         html,
         body,
         #root {
-          margin: 0;
           width: 100%;
           height: 100%;
+          margin: 0;
           overflow: hidden;
           background: #000;
         }
@@ -873,13 +402,7 @@ export default function GhostlyManors() {
           width: 100%;
           height: 100%;
           overflow: hidden;
-          background:
-            radial-gradient(
-              ellipse at center,
-              #090a0c 0%,
-              #030304 48%,
-              #000000 100%
-            );
+          background: radial-gradient(ellipse at center, #090a0c 0%, #030304 48%, #000 100%);
         }
 
         .ghostly-manors canvas {
@@ -892,205 +415,62 @@ export default function GhostlyManors() {
           position: fixed;
           top: 42px;
           left: 50%;
-          transform: translateX(-50%);
           z-index: 10;
-
+          transform: translateX(-50%);
           pointer-events: none;
           user-select: none;
-
           text-align: center;
         }
 
         .title {
           margin: 0;
-
-          color: rgba(
-            245,
-            247,
-            250,
-            0.94
-          );
-
-          font-family:
-            Georgia,
-            "Times New Roman",
-            serif;
-
-          font-size: clamp(
-            30px,
-            4vw,
-            58px
-          );
-
+          color: rgba(245, 247, 250, 0.94);
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: clamp(30px, 4vw, 58px);
           font-weight: 400;
-
           letter-spacing: 0.2em;
-
           text-transform: uppercase;
-
           white-space: nowrap;
-
           text-shadow:
-            0 0 4px
-              rgba(
-                255,
-                255,
-                255,
-                0.9
-              ),
-
-            0 0 12px
-              rgba(
-                230,
-                235,
-                240,
-                0.55
-              ),
-
-            0 0 28px
-              rgba(
-                210,
-                218,
-                225,
-                0.3
-              ),
-
-            0 0 60px
-              rgba(
-                180,
-                190,
-                200,
-                0.15
-              );
-
+            0 0 4px rgba(255, 255, 255, 0.9),
+            0 0 12px rgba(230, 235, 240, 0.55),
+            0 0 28px rgba(210, 218, 225, 0.3),
+            0 0 60px rgba(180, 190, 200, 0.15);
           opacity: 0.88;
-
-          animation:
-            ghostTitlePulse
-            6s
-            ease-in-out
-            infinite;
+          animation: ghostTitlePulse 6s ease-in-out infinite;
         }
 
         .title-line {
           width: 58%;
-
           height: 1px;
-
-          margin:
-            13px auto 0;
-
-          background:
-            linear-gradient(
-              90deg,
-              transparent,
-              rgba(
-                235,
-                240,
-                245,
-                0.65
-              ),
-              transparent
-            );
-
+          margin: 13px auto 0;
+          background: linear-gradient(90deg, transparent, rgba(235, 240, 245, 0.65), transparent);
           box-shadow:
-            0 0 7px
-              rgba(
-                255,
-                255,
-                255,
-                0.45
-              ),
-
-            0 0 18px
-              rgba(
-                220,
-                225,
-                230,
-                0.2
-              );
-
+            0 0 7px rgba(255, 255, 255, 0.45),
+            0 0 18px rgba(220, 225, 230, 0.2);
           opacity: 0.5;
-
-          animation:
-            ghostLinePulse
-            6s
-            ease-in-out
-            infinite;
+          animation: ghostLinePulse 6s ease-in-out infinite;
         }
 
         @keyframes ghostTitlePulse {
           0%,
           100% {
             opacity: 0.62;
-
-            transform:
-              translateY(1px);
-
+            transform: translateY(1px);
             text-shadow:
-              0 0 4px
-                rgba(
-                  255,
-                  255,
-                  255,
-                  0.55
-                ),
-
-              0 0 12px
-                rgba(
-                  230,
-                  235,
-                  240,
-                  0.3
-                ),
-
-              0 0 30px
-                rgba(
-                  210,
-                  218,
-                  225,
-                  0.14
-                );
+              0 0 4px rgba(255, 255, 255, 0.55),
+              0 0 12px rgba(230, 235, 240, 0.3),
+              0 0 30px rgba(210, 218, 225, 0.14);
           }
 
           50% {
             opacity: 0.96;
-
-            transform:
-              translateY(0);
-
+            transform: translateY(0);
             text-shadow:
-              0 0 5px
-                rgba(
-                  255,
-                  255,
-                  255,
-                  0.95
-                ),
-
-              0 0 15px
-                rgba(
-                  240,
-                  244,
-                  248,
-                  0.65
-                ),
-
-              0 0 32px
-                rgba(
-                  220,
-                  225,
-                  230,
-                  0.38
-                ),
-
-              0 0 70px
-                rgba(
-                  200,
-                  210,
-                  220,
-                  0.18
-                );
+              0 0 5px rgba(255, 255, 255, 0.95),
+              0 0 15px rgba(240, 244, 248, 0.65),
+              0 0 32px rgba(220, 225, 230, 0.38),
+              0 0 70px rgba(200, 210, 220, 0.18);
           }
         }
 
@@ -1098,16 +478,12 @@ export default function GhostlyManors() {
           0%,
           100% {
             opacity: 0.22;
-
-            transform:
-              scaleX(0.72);
+            transform: scaleX(0.72);
           }
 
           50% {
             opacity: 0.65;
-
-            transform:
-              scaleX(1);
+            transform: scaleX(1);
           }
         }
 
