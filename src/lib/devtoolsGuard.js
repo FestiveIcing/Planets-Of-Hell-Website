@@ -1,14 +1,3 @@
-let devToolsOpen = false
-
-const checkDevTools = () => {
-  const threshold = 160
-  const widthGap = window.outerWidth - window.innerWidth > threshold
-  const heightGap = window.outerHeight - window.innerHeight > threshold
-  if (widthGap || heightGap) {
-    devToolsOpen = true
-  }
-}
-
 export const initDevToolsGuard = () => {
   const blockKeys = (e) => {
     const key = e.key || ''
@@ -23,8 +12,4 @@ export const initDevToolsGuard = () => {
   }
 
   window.addEventListener('keydown', blockKeys)
-  window.addEventListener('resize', checkDevTools)
-  setInterval(checkDevTools, 1000)
 }
-
-export const isDevToolsOpen = () => devToolsOpen

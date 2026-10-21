@@ -1,20 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { ExternalLink } from 'lucide-react'
 
 const HERO_IMAGE = '/images/hero.jpg'
 
 export default function Home() {
-  const [glow, setGlow] = useState({ x: 50, y: 50 })
+  const glowRef = useRef(null)
 
   useEffect(() => {
-    const onMove = (e) => {
-      setGlow({
-        x: (e.clientX / window.innerWidth) * 100,
-        y: (e.clientY / window.innerHeight) * 100,
-      })
+    let frame = 0
+    let x = 50
+    let y = 50
+    const paint = () => {
+      frame = 0
+      glowRef.current?.style.setProperty('--gx', `${x}%`)
+      glowRef.current?.style.setProperty('--gy', `${y}%`)
     }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
+    const onMove = (e) => {
+      x = (e.clientX / window.innerWidth) * 100
+      y = (e.clientY / window.innerHeight) * 100
+      if (!frame) frame = requestAnimationFrame(paint)
+    }
+    window.addEventListener('mousemove', onMove, { passive: true })
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      if (frame) cancelAnimationFrame(frame)
+    }
   }, [])
 
   return (
@@ -29,10 +39,11 @@ export default function Home() {
       onDragStart={(e) => e.preventDefault()}
     >
       <div
+        ref={glowRef}
         className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
         aria-hidden="true"
         style={{
-          background: `radial-gradient(600px circle at ${glow.x}% ${glow.y}%, rgba(120,80,200,0.10), transparent 60%)`,
+          background: 'radial-gradient(600px circle at var(--gx, 50%) var(--gy, 50%), rgba(120,80,200,0.10), transparent 60%)',
         }}
       />
 
@@ -118,8 +129,9 @@ export default function Home() {
           alt="Atmospheric artwork preview for Planets of Hell"
           className="h-full w-full object-cover"
           draggable={false}
-          width={960}
-          height={1080}
+          width={736}
+          height={849}
+          decoding="async"
         />
         <div className="absolute inset-0 bg-black/20" aria-hidden="true" />
       </aside>
